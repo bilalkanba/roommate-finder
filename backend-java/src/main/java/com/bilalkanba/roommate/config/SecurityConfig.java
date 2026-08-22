@@ -8,8 +8,10 @@ import com.nimbusds.jose.proc.JWSVerificationKeySelector;
 import com.nimbusds.jose.proc.SecurityContext;
 import com.nimbusds.jwt.proc.ConfigurableJWTProcessor;
 import com.nimbusds.jwt.proc.DefaultJWTProcessor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.core.convert.converter.Converter;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AbstractAuthenticationToken;
@@ -31,23 +33,27 @@ import java.net.URL;
 import java.util.List;
 
 /**
- * SecurityConfig - Configuration Spring Security avec JWT ES256 (Supabase).
+ * SecurityConfig v3 - JwtDecoder lazy pour eviter blocage reseau au startup.
  *
- * IMPORTANT :
- * Supabase utilise ES256 (Elliptic Curve, P-256) pour signer les JWTs.
- * Par defaut, Spring Security s'attend a du RS256 → doit etre configure
- * explicitement pour ES256 via un JwtDecoder custom.
+ * PROBLEME RESOLU :
+ * Avant, Spring essayait de telecharger les cles JWKS Supabase au startup.
+ * En CI (GitHub Actions), l'acces reseau vers Supabase peut echouer/timeout
+ * -> le contexte Spring ne demarre pas -> tous les tests plantent.
+ *
+ * SOLUTION :
+ * @Lazy sur le bean JwtDecoder : Spring l'instancie seulement au 1er usage
+ * (quand un endpoint securise est appele), pas au startup.
+ * Les tests d'integration Repository (@DataJpaTest) ne l'utilisent jamais.
  */
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
 
-    // URL JWKS de Supabase (contient les cles publiques ES256)
-    private static final String JWKS_URI =
-            "https://yfnjxbdpnetcqbhgsqjb.supabase.co/auth/v1/.well-known/jwks.json";
+    @Value("${app.supabase.jwks-uri:https://yfnjxbdpnetcqbhgsqjb.supabase.co/auth/v1/.well-known/jwks.json}")
+    private String jwksUri;
 
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain securityFilterChain(HttpSecurity http, @Lazy JwtDecoder jwtDecoder) throws Exception {
         http
                 .cors(Customizer.withDefaults())
                 .csrf(csrf -> csrf.disable())
@@ -62,43 +68,37 @@ public class SecurityConfig {
                         .anyRequest().authenticated()
                 )
                 .oauth2ResourceServer(oauth2 -> oauth2
-                        .jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter()))
+                        .jwt(jwt -> jwt
+                                .decoder(jwtDecoder)  // Injection LAZY
+                                .jwtAuthenticationConverter(jwtAuthenticationConverter())
+                        )
                 );
 
         return http.build();
     }
 
     /**
-     * CRITICAL : JwtDecoder custom configure pour ES256.
-     *
-     * Par defaut, NimbusJwtDecoder.withJwkSetUri() utilise RS256.
-     * On doit passer par un JWTProcessor manuel pour specifier ES256.
+     * JwtDecoder LAZY : instancie seulement quand un endpoint securise est hit.
+     * Evite le blocage au startup si Supabase est inaccessible.
      */
     @Bean
+    @Lazy
     public JwtDecoder jwtDecoder() {
         try {
-            // 1. Source des cles publiques : le JWKS endpoint de Supabase
-            JWKSource<SecurityContext> jwkSource = new RemoteJWKSet<>(new URL(JWKS_URI));
+            JWKSource<SecurityContext> jwkSource = new RemoteJWKSet<>(new URL(jwksUri));
 
-            // 2. Selector qui dit "utilise ES256 pour verifier"
             JWSKeySelector<SecurityContext> keySelector =
                     new JWSVerificationKeySelector<>(JWSAlgorithm.ES256, jwkSource);
 
-            // 3. JWT Processor configure avec ce selector
             ConfigurableJWTProcessor<SecurityContext> jwtProcessor = new DefaultJWTProcessor<>();
             jwtProcessor.setJWSKeySelector(keySelector);
 
-            // 4. NimbusJwtDecoder qui utilise notre processor
             return new NimbusJwtDecoder(jwtProcessor);
         } catch (MalformedURLException e) {
-            throw new RuntimeException("Invalid JWKS URI: " + JWKS_URI, e);
+            throw new RuntimeException("Invalid JWKS URI: " + jwksUri, e);
         }
     }
 
-    /**
-     * Convertit un JWT en Authentication token.
-     * On utilise le claim "sub" comme principal (= le user_id Supabase).
-     */
     private Converter<Jwt, AbstractAuthenticationToken> jwtAuthenticationConverter() {
         JwtAuthenticationConverter converter = new JwtAuthenticationConverter();
         converter.setPrincipalClaimName("sub");
