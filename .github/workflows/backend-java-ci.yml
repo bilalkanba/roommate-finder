@@ -1,0 +1,76 @@
+name: Backend Java CI
+
+# Se declenche sur push main + toutes les Pull Requests
+on:
+  push:
+    branches: [ main, master ]
+    paths:
+      - 'backend-java/**'
+      - '.github/workflows/backend-java-ci.yml'
+  pull_request:
+    branches: [ main, master ]
+    paths:
+      - 'backend-java/**'
+
+jobs:
+  test:
+    name: Build & Test
+    runs-on: ubuntu-latest
+
+    # Docker est deja disponible sur ubuntu-latest, Testcontainers marche out of the box
+
+    steps:
+      # 1. Recuperer le code
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # 2. Setup Java 17
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: maven
+
+      # 3. Verifier que Docker est bien la (pour Testcontainers)
+      - name: Verify Docker
+        run: docker --version
+
+      # 4. Compiler le projet
+      - name: Compile with Maven
+        working-directory: ./backend-java
+        run: mvn -B compile
+
+      # 5. Lancer TOUS les tests (unit + integration)
+      - name: Run tests
+        working-directory: ./backend-java
+        run: mvn -B verify
+        env:
+          # Empeche le vrai OpenAI de recevoir des appels en CI
+          OPENAI_API_KEY: dummy-key-for-tests
+
+      # 6. Upload du rapport de tests (visible dans Actions -> Artifacts)
+      - name: Upload test reports
+        if: always()  # meme si les tests echouent
+        uses: actions/upload-artifact@v4
+        with:
+          name: surefire-reports
+          path: backend-java/target/surefire-reports/
+          retention-days: 7
+
+      # 7. Upload du rapport JaCoCo coverage
+      - name: Upload JaCoCo coverage report
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: jacoco-report
+          path: backend-java/target/site/jacoco/
+          retention-days: 7
+
+      # 8. Affiche un resume des tests dans le PR (badges verts/rouges)
+      - name: Publish Test Report
+        uses: mikepenz/action-junit-report@v4
+        if: always()
+        with:
+          report_paths: 'backend-java/target/surefire-reports/TEST-*.xml'
+          check_name: 'JUnit Test Results'

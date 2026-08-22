@@ -65,3 +65,18 @@ yarn-error.log*
 build/
 .next/
 .vercel/
+# =============================================
+# Java / Maven / IntelliJ
+# =============================================
+target/
+*.class
+*.jar
+*.war
+.mvn/
+mvnw
+mvnw.cmd
+*.iml
+*.ipr
+*.iws
+HELP.md
+dependency-reduced-pom.xml
