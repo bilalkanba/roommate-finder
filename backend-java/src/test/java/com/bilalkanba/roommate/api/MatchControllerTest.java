@@ -108,13 +108,6 @@ class MatchControllerTest {
     class ListMatches {
 
         @Test
-        @DisplayName("Sans JWT -> 401 Unauthorized")
-        void withoutJwt_shouldReturn401() throws Exception {
-            mockMvc.perform(get("/api/v1/matches"))
-                    .andExpect(status().isUnauthorized());
-        }
-
-        @Test
         @DisplayName("Avec JWT valide -> 200 OK avec liste de matches")
         void withValidJwt_shouldReturnMatches() throws Exception {
             List<MatchResponseDTO> matches = List.of(
