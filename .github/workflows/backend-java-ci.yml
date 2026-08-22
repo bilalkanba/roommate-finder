@@ -52,7 +52,7 @@ jobs:
       # 6. Upload du rapport de tests (visible dans Actions -> Artifacts)
       - name: Upload test reports
         if: always()  # meme si les tests echouent
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: surefire-reports
           path: backend-java/target/surefire-reports/
