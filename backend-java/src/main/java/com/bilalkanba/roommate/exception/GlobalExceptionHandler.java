@@ -101,7 +101,21 @@ public class GlobalExceptionHandler {
     // ============================================================
     // 500 Internal Server Error - Catch-all
     // ============================================================
-
+    @ExceptionHandler(jakarta.validation.ConstraintViolationException.class)
+    public ResponseEntity<Map<String, Object>> handleConstraintViolation(
+            jakarta.validation.ConstraintViolationException ex
+    ) {
+        Map<String, String> fieldErrors = new HashMap<>();
+        ex.getConstraintViolations().forEach(v ->
+                fieldErrors.put(v.getPropertyPath().toString(), v.getMessage())
+        );
+        log.warn("Constraint violation: {}", fieldErrors);
+        return buildErrorResponse(
+                HttpStatus.BAD_REQUEST,
+                "Parametres invalides",
+                fieldErrors
+        );
+    }
     /**
      * Intercepte TOUTES les autres exceptions non catchees.
      * On log en ERROR (avec la stacktrace) pour debug,
