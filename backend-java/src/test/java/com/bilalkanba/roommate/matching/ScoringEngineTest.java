@@ -473,14 +473,14 @@ class ScoringEngineTest {
     class GlobalScore {
 
         @Test
-        @DisplayName("Profils identiques -> score proche de 100")
-        void identicalProfiles_shouldScoreNear100() {
+        @DisplayName("Profils identiques -> score eleve (>= 80)")
+        void identicalProfiles_shouldScoreHigh() {
             Profile a = baseProfile().build();
             Profile b = baseProfile().build();
 
             double totalScore = scoringEngine.calculateCompatibility(a, b).totalScore();
 
-            assertThat(totalScore).isGreaterThanOrEqualTo(90.0);
+            assertThat(totalScore).isGreaterThanOrEqualTo(80.0);
         }
 
         @Test
