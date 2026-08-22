@@ -59,6 +59,8 @@ class MatchControllerTest {
     @MockBean
     private ExplanationService explanationService;
 
+    @MockBean
+    private org.springframework.security.oauth2.jwt.JwtDecoder jwtDecoder;
     // Fixtures
     private final UUID currentUserId = UUID.fromString("c8ada769-6533-4ebf-8123-f9661e247ed4");
     private final UUID otherUserId = UUID.fromString("b1fcca5a-125a-46b0-a8ab-b6e571371010");
