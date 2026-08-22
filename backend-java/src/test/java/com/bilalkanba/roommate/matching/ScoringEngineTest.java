@@ -329,15 +329,15 @@ class ScoringEngineTest {
         }
 
         @Test
-        @DisplayName("Compatibles totalement -> 100")
+        @DisplayName("Non-fumeur + non-fumeur + no_pets + no_pets -> 100")
         void fullyCompatible_shouldScore100() {
             Profile a = baseProfile()
                     .smoking(SmokingPreference.no_smoking)
-                    .pets(PetsPreference.ok_with_pets)
+                    .pets(PetsPreference.no_pets)
                     .build();
             Profile b = baseProfile()
                     .smoking(SmokingPreference.no_smoking)
-                    .pets(PetsPreference.has_pet)
+                    .pets(PetsPreference.no_pets)
                     .build();
 
             assertThat(getDimensionScore(a, b, "smoking_pets")).isEqualTo(100.0);
