@@ -1,4 +1,4 @@
-# 🏠 Roommate Finder AI
+# 🏠 Roommate Finder
 
 AI-powered roommate matching platform that helps students and young professionals find compatible living partners.
 
@@ -190,5 +190,5 @@ Coming soon — will be added once the MVP is deployed.
 
 Bilal Kanba — Software Engineer, EHEI Oujda (Class of 2026)
 
-- 💼 LinkedIn (https://www.linkedin.com/in/bilal-kanba)
+- 💼 LinkedIn (https://www.linkedin.com/in/bilal-kanba-a2aaa0366)
 - 🐙 GitHub (https://github.com/bilalkanba)
